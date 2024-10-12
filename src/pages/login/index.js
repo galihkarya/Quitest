@@ -7,6 +7,11 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleLogin = () => {
+    if (!username) {
+      alert("Username tidak boleh kosong!");
+      return;
+    }
+    
     localStorage.setItem("user", username);
     navigate("/quiz");
   };
