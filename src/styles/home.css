@@ -1,12 +1,12 @@
 .home-container {
     display: flex;
     flex-direction: column;
-    align-items: center;
     justify-content: center;
     height: 100vh;
     background-color: #0a0a14;
     color: #ffffff;
-    padding: 52px;
+    padding: 48px;
+    overflow: hidden;
 }
 
 .head-title {
@@ -14,7 +14,7 @@
     margin-bottom: 1rem;
 }
 
-.body-home {
+div p {
     font-size: 16px;
     margin-bottom: 1rem;
 }
@@ -28,4 +28,5 @@
     cursor: pointer;
     font-size: 16px;
     margin-top: 1rem;
+    width: fit-content;
 }
