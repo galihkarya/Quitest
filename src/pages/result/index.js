@@ -1,24 +1,24 @@
-import React from 'react'
-import { useNavigate } from 'react-router-dom';
-
+import React from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import "../../styles/result.css";
 
-const Result = ({ score, totalQuestions }) => {
-    const navigate = useNavigate();
-  
-    const handleRestart = () => {
-      localStorage.removeItem('quizState');
-      navigate('/');
-    };
-  
-    return (
-      <div className='result-container'>
-        <h2>Quiz Result</h2>
-        <p>Correct Answers: {score}</p>
-        <p>Total Questions: {totalQuestions}</p>
-        <button onClick={handleRestart}>Go home</button>
-      </div>
-    );
+const Result = () => {
+  const navigate = useNavigate();
+  const { correctAnswers, wrongAnswers, unansweredQuestions } = useLocation().state;
+
+  const handleRestart = () => {
+    navigate("/");
   };
-  
-  export default Result;
+
+  return (
+    <div className="result-container">
+      <h2>Quiz Result</h2>
+      <p>Correct Answers: {correctAnswers}</p>
+      <p>Wrong Answers: {wrongAnswers}</p>
+      <p>Unanswered Questions: {unansweredQuestions}</p>
+      <button onClick={handleRestart}>Go home</button>
+    </div>
+  );
+};
+
+export default Result;
