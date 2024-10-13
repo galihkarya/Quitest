@@ -1,89 +1,183 @@
 import React, { useState, useEffect } from "react";
-import { fetchQuestions } from "./../../api/axios.js";
 import { useNavigate } from "react-router-dom";
 import "../../styles/quiz.css";
 
 const Quiz = () => {
-  const [questions, setQuestions] = useState([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(300);
-  const [answeredQuestions, setAnsweredQuestions] = useState(0);
+  const [quizState, setQuizState] = useState(() => {
+    const savedState = localStorage.getItem("quizState");
+    return savedState !== null
+      ? JSON.parse(savedState)
+      : {
+          questions: [],
+          currentQuestionIndex: 0,
+          score: 0,
+          timeLeft: 150,
+          answeredQuestions: 0,
+          correctAnswers: 0,
+          wrongAnswers: 0,
+          user: "",
+          token: "",
+        };
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
-    const loadQuestions = async () => {
-      const fetchedQuestions = await fetchQuestions();
-      setQuestions(fetchedQuestions);
+    const setQuestions = (questions) => {
+      setQuizState((prevState) => ({
+        ...prevState,
+        questions,
+      }));
     };
 
-    loadQuestions();
+    const fetchUser = async () => {
+      const userData = localStorage.getItem("userData");
+      if (userData) {
+        setQuizState((prevState) => ({
+          ...prevState,
+          user: JSON.parse(userData).username,
+          token: JSON.parse(userData).token,
+        }));
+      }
+    };
 
-    const savedState = JSON.parse(localStorage.getItem("quizState"));
-    if (savedState) {
-      setQuestions(savedState.questions);
-      setCurrentQuestionIndex(savedState.currentQuestionIndex);
-      setScore(savedState.score);
-      setAnsweredQuestions(savedState.answeredQuestions);
-      setTimeLeft(savedState.timeLeft);
-    }
+    const loadQuestions = async () => {
+      const storedQuestions = localStorage.getItem("questions");
+      if (storedQuestions) {
+        setQuizState((prevState) => ({
+          ...prevState,
+          questions: JSON.parse(storedQuestions),
+        }));
+      } else {
+        setTimeout(() => {
+          fetch(
+            `https://opentdb.com/api.php?amount=${5}&category=${27}&token=${quizState.token}`
+          )
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`Error: ${response.status}`);
+              }
+              return response.json();
+            })
+            .then((data) => {
+              setQuestions(data.results);
+              localStorage.setItem("questions", JSON.stringify(data.results));
+            })
+            .catch((err) => {
+              console.log(err.message);
+            }, 1000);
+        });
+      }
+    };
+
+    fetchUser().then(() => {
+      loadQuestions();
+    });
   }, []);
 
   useEffect(() => {
-    if (timeLeft > 0) {
+    if (quizState.timeLeft > 0) {
       const timer = setInterval(() => {
-        setTimeLeft(timeLeft - 1);
+        setQuizState((prevState) => ({
+          ...prevState,
+          timeLeft: prevState.timeLeft - 1,
+        }));
       }, 1000);
 
       return () => clearInterval(timer);
     } else {
-      navigate("/result");
+      localStorage.removeItem("quizState");
+      localStorage.removeItem("userData");
+      localStorage.removeItem("questions");
+      navigate("/result", {
+        state: {
+          score: quizState.score,
+          totalQuestions: quizState.questions.length,
+          correctAnswers: quizState.correctAnswers,
+          wrongAnswers: quizState.wrongAnswers,
+          unansweredQuestions:
+            quizState.questions.length - quizState.answeredQuestions,
+        },
+      });
     }
-  }, [timeLeft, navigate]);
+  }, [quizState.timeLeft, navigate, quizState]);
 
   useEffect(() => {
-    localStorage.setItem(
-      "quizState",
-      JSON.stringify({
-        questions,
-        currentQuestionIndex,
-        score,
-        answeredQuestions,
-        timeLeft,
-      })
-    );
-  }, [questions, currentQuestionIndex, score, answeredQuestions, timeLeft]);
+    localStorage.setItem("quizState", JSON.stringify(quizState));
+  }, [quizState]);
 
   const handleAnswer = (isCorrect) => {
-    if (isCorrect) setScore(score + 1);
-    setAnsweredQuestions(answeredQuestions + 1);
-    if (currentQuestionIndex + 1 < questions.length) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      navigate("/result");
-    }
+    setQuizState((prevState) => {
+      const newScore = isCorrect ? prevState.score + 1 : prevState.score;
+      const newCorrectAnswers = isCorrect
+        ? prevState.correctAnswers + 1
+        : prevState.correctAnswers;
+      const newWrongAnswers = isCorrect
+        ? prevState.wrongAnswers
+        : prevState.wrongAnswers + 1;
+      const newAnsweredQuestions = prevState.answeredQuestions + 1;
+      const newCurrentQuestionIndex = prevState.currentQuestionIndex + 1;
+
+      if (newCurrentQuestionIndex < prevState.questions.length) {
+        return {
+          ...prevState,
+          score: newScore,
+          correctAnswers: newCorrectAnswers,
+          wrongAnswers: newWrongAnswers,
+          answeredQuestions: newAnsweredQuestions,
+          currentQuestionIndex: newCurrentQuestionIndex,
+        };
+      } else {
+        localStorage.removeItem("quizState");
+        localStorage.removeItem("userData");
+        localStorage.removeItem("questions");
+        navigate("/result", {
+          state: {
+            score: newScore,
+            totalQuestions: prevState.questions.length,
+            correctAnswers: newCorrectAnswers,
+            wrongAnswers: newWrongAnswers,
+            unansweredQuestions:
+              prevState.questions.length - newAnsweredQuestions,
+          },
+        });
+        return prevState;
+      }
+    });
   };
 
   return (
     <div className="quiz-container">
-      {questions.length > 0 && currentQuestionIndex < questions.length ? (
+      {quizState.questions.length > 0 &&
+      quizState.currentQuestionIndex < quizState.questions.length ? (
         <div>
           <div className="header-container">
-            <h2>Question</h2>
-            <h2 className="question-number">{currentQuestionIndex + 1}</h2>
-            <h2>of</h2>
-            <h2 className="question-number">{questions.length}</h2>
+            <h3>{quizState.user}</h3>
+            <div className="sub-header-container">
+              <h2>Question</h2>
+              <h2 className="question-number">
+                {quizState.currentQuestionIndex + 1}
+              </h2>
+              <h2>of</h2>
+              <h2 className="question-number">{quizState.questions.length}</h2>
+            </div>
           </div>
-          <p>{questions[currentQuestionIndex].question}</p>
+          <p>{quizState.questions[quizState.currentQuestionIndex].question}</p>
           <div className="answer-options-container">
-            {questions[currentQuestionIndex].incorrect_answers
-              .concat(questions[currentQuestionIndex].correct_answer)
+            {quizState.questions[
+              quizState.currentQuestionIndex
+            ].incorrect_answers
+              .concat(
+                quizState.questions[quizState.currentQuestionIndex]
+                  .correct_answer
+              )
               .map((answer, index) => (
                 <button
                   key={index}
                   onClick={() =>
                     handleAnswer(
-                      answer === questions[currentQuestionIndex].correct_answer
+                      answer ===
+                        quizState.questions[quizState.currentQuestionIndex]
+                          .correct_answer
                     )
                   }
                 >
@@ -91,7 +185,7 @@ const Quiz = () => {
                 </button>
               ))}
           </div>
-          <p>Time left: {timeLeft}s</p>
+          <p>Time left: {quizState.timeLeft}s</p>
         </div>
       ) : (
         <p>Loading questions...</p>
