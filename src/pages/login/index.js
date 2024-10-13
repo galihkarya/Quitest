@@ -4,16 +4,36 @@ import "../../styles/login.css";
 
 const Login = () => {
   const [username, setUsername] = useState("");
+  const [token, setToken] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!username) {
-      alert("Username tidak boleh kosong!");
+      alert("Username cannot be empty!");
       return;
     }
-    
-    localStorage.setItem("user", username);
-    navigate("/quiz");
+
+    const fetchToken = async () => {
+      try {
+        const response = await fetch(
+          "https://opentdb.com/api_token.php?command=request"
+        );
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status}`);
+        }
+        const data = await response.json();
+        setToken(data.token);
+        localStorage.setItem(
+          "userData",
+          `{"username": "${username}", "token": "${data.token}"}`
+        );
+        navigate("/quiz");
+      } catch (err) {
+        console.log(err.message);
+      }
+    };
+
+    fetchToken();
   };
 
   return (
@@ -25,7 +45,7 @@ const Login = () => {
           type="text"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="Username"
+          placeholder="johndoe"
         />
         <div className="button-container">
           <button className="login-button" onClick={handleLogin}>
