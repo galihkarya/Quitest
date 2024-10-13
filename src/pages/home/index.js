@@ -1,8 +1,15 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/home.css";
 
 const Home = () => {
+  useEffect(() => {
+    const user = localStorage.getItem("userData");
+    if (user) {
+      navigate("/quiz");
+    }
+  }, []);
+
   const navigate = useNavigate();
 
   return (
