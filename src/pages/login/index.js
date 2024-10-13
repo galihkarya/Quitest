@@ -1,10 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/login.css";
 
 const Login = () => {
+  useEffect(() => {
+    const user = localStorage.getItem("userData");
+    if (user) {
+      navigate("/quiz");
+    }
+  }, []);
+
   const [username, setUsername] = useState("");
-  const [token, setToken] = useState("");
   const navigate = useNavigate();
 
   const handleLogin = async () => {
@@ -22,7 +28,6 @@ const Login = () => {
           throw new Error(`Error: ${response.status}`);
         }
         const data = await response.json();
-        setToken(data.token);
         localStorage.setItem(
           "userData",
           `{"username": "${username}", "token": "${data.token}"}`
@@ -40,6 +45,9 @@ const Login = () => {
     <div className="login-container">
       <div className="card-container">
         <h2>Login</h2>
+        <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
+
+        <label>Username</label>
         <input
           className="input-username"
           type="text"
@@ -48,10 +56,11 @@ const Login = () => {
           placeholder="johndoe"
         />
         <div className="button-container">
-          <button className="login-button" onClick={handleLogin}>
+          <button className="login-button" type="submit">
             Login
           </button>
         </div>
+        </form>
       </div>
     </div>
   );
